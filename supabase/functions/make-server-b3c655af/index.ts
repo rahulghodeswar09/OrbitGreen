@@ -1,15 +1,15 @@
-import { Hono } from "npm:hono";
+import { Hono, type Context } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import * as kv from "./kv_store.tsx";
+import * as kv from "./kv_store.ts";
 
-const app = new Hono();
+const app = new Hono().basePath('/make-server-b3c655af');
 
 // Initialize Supabase client
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? Deno.env.get("SUPABASE_ANON_KEY") ?? '',
 );
 
 // Enable logger
@@ -17,18 +17,36 @@ app.use('*', logger(console.log));
 
 // Enable CORS for all routes and methods
 app.use(
-  "/*",
+  "*",
   cors({
     origin: "*",
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "x-client-info", "apikey"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
   }),
 );
 
+// Explicitly handle OPTIONS for preflight requests
+app.options("*", (c: Context) => {
+  return c.text("", 204);
+});
+
+// Error handling
+app.onError((err: Error, c: Context) => {
+  console.error(`ERROR: ${err.message}`, err);
+  return c.json({
+    error: err.message,
+    stack: Deno.env.get('DENO_REGION') ? undefined : err.stack,
+  }, 500);
+});
+
+app.notFound((c: Context) => {
+  return c.json({ error: `Not Found: ${c.req.path}` }, 404);
+});
+
 // Health check endpoint
-app.get("/make-server-b3c655af/health", (c) => {
+app.get("/health", (c: Context) => {
   return c.json({ status: "ok" });
 });
 
@@ -37,7 +55,7 @@ app.get("/make-server-b3c655af/health", (c) => {
 // =====================================================
 
 // Customer Signup
-app.post("/make-server-b3c655af/auth/signup", async (c) => {
+app.post("/auth/signup", async (c: Context) => {
   try {
     const body = await c.req.json();
     const { email, password, name, phone, address } = body;
@@ -71,7 +89,7 @@ app.post("/make-server-b3c655af/auth/signup", async (c) => {
       createdAt: new Date().toISOString(),
     });
 
-    return c.json({ 
+    return c.json({
       message: "Customer registered successfully",
       userId: userId
     });
@@ -82,7 +100,7 @@ app.post("/make-server-b3c655af/auth/signup", async (c) => {
 });
 
 // Admin Signup (protected - could require admin key)
-app.post("/make-server-b3c655af/auth/admin-signup", async (c) => {
+app.post("/auth/admin-signup", async (c: Context) => {
   try {
     const body = await c.req.json();
     const { email, password, name, adminKey } = body;
@@ -119,7 +137,7 @@ app.post("/make-server-b3c655af/auth/admin-signup", async (c) => {
       createdAt: new Date().toISOString(),
     });
 
-    return c.json({ 
+    return c.json({
       message: "Admin registered successfully",
       userId: userId
     });
@@ -130,7 +148,7 @@ app.post("/make-server-b3c655af/auth/admin-signup", async (c) => {
 });
 
 // Get User Profile (requires auth)
-app.get("/make-server-b3c655af/auth/profile", async (c) => {
+app.get("/auth/profile", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -157,7 +175,7 @@ app.get("/make-server-b3c655af/auth/profile", async (c) => {
 });
 
 // Update User Profile
-app.put("/make-server-b3c655af/auth/profile", async (c) => {
+app.put("/auth/profile", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -201,7 +219,7 @@ app.put("/make-server-b3c655af/auth/profile", async (c) => {
 // =====================================================
 
 // Get all customers
-app.get("/make-server-b3c655af/admin/customers", async (c) => {
+app.get("/admin/customers", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -231,7 +249,7 @@ app.get("/make-server-b3c655af/admin/customers", async (c) => {
 });
 
 // Delete customer (Admin only)
-app.delete("/make-server-b3c655af/admin/customers/:customerId", async (c) => {
+app.delete("/admin/customers/:customerId", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -249,7 +267,7 @@ app.delete("/make-server-b3c655af/admin/customers/:customerId", async (c) => {
     }
 
     const customerId = c.req.param('customerId');
-    
+
     // Delete user profile
     await kv.del(`user:${customerId}`);
     // Delete installation data
@@ -272,7 +290,7 @@ app.delete("/make-server-b3c655af/admin/customers/:customerId", async (c) => {
 // =====================================================
 
 // Get installation details for current user
-app.get("/make-server-b3c655af/installation", async (c) => {
+app.get("/installation", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -285,7 +303,7 @@ app.get("/make-server-b3c655af/installation", async (c) => {
     }
 
     const installation = await kv.get(`installation:${user.id}`);
-    
+
     return c.json({ installation: installation || null });
   } catch (error) {
     console.log(`Error fetching installation: ${error}`);
@@ -294,7 +312,7 @@ app.get("/make-server-b3c655af/installation", async (c) => {
 });
 
 // Create/Update installation (Admin only)
-app.post("/make-server-b3c655af/admin/installation/:customerId", async (c) => {
+app.post("/admin/installation/:customerId", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -342,7 +360,7 @@ app.post("/make-server-b3c655af/admin/installation/:customerId", async (c) => {
 // =====================================================
 
 // Create complaint/ticket
-app.post("/make-server-b3c655af/complaints", async (c) => {
+app.post("/complaints", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -378,7 +396,7 @@ app.post("/make-server-b3c655af/complaints", async (c) => {
 });
 
 // Get user's complaints
-app.get("/make-server-b3c655af/complaints", async (c) => {
+app.get("/complaints", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -401,7 +419,7 @@ app.get("/make-server-b3c655af/complaints", async (c) => {
 });
 
 // Get all complaints (Admin only)
-app.get("/make-server-b3c655af/admin/complaints", async (c) => {
+app.get("/admin/complaints", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -428,7 +446,7 @@ app.get("/make-server-b3c655af/admin/complaints", async (c) => {
 });
 
 // Update complaint status (Admin only)
-app.put("/make-server-b3c655af/admin/complaints/:complaintId", async (c) => {
+app.put("/admin/complaints/:complaintId", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -474,7 +492,7 @@ app.put("/make-server-b3c655af/admin/complaints/:complaintId", async (c) => {
 // =====================================================
 
 // Save document info
-app.post("/make-server-b3c655af/documents", async (c) => {
+app.post("/documents", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -511,7 +529,7 @@ app.post("/make-server-b3c655af/documents", async (c) => {
 });
 
 // Get documents
-app.get("/make-server-b3c655af/documents/:userId?", async (c) => {
+app.get("/documents/:userId?", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -538,7 +556,7 @@ app.get("/make-server-b3c655af/documents/:userId?", async (c) => {
 // =====================================================
 
 // Send notification (Admin only)
-app.post("/make-server-b3c655af/admin/notifications", async (c) => {
+app.post("/admin/notifications", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -576,7 +594,7 @@ app.post("/make-server-b3c655af/admin/notifications", async (c) => {
       // Broadcast to all customers
       const allUsers = await kv.getByPrefix('user:');
       const customers = allUsers.filter((u: any) => u.role === 'customer');
-      
+
       for (const customer of customers) {
         const userNotifs = await kv.get(`notifications:${customer.id}`) || [];
         userNotifs.push({ ...notification, userId: customer.id });
@@ -592,7 +610,7 @@ app.post("/make-server-b3c655af/admin/notifications", async (c) => {
 });
 
 // Get user notifications
-app.get("/make-server-b3c655af/notifications", async (c) => {
+app.get("/notifications", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -617,7 +635,7 @@ app.get("/make-server-b3c655af/notifications", async (c) => {
 // ADMIN ANALYTICS
 // =====================================================
 
-app.get("/make-server-b3c655af/admin/analytics", async (c) => {
+app.get("/admin/analytics", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -636,10 +654,10 @@ app.get("/make-server-b3c655af/admin/analytics", async (c) => {
 
     const allUsers = await kv.getByPrefix('user:');
     const customers = allUsers.filter((u: any) => u.role === 'customer');
-    
+
     const allComplaints = await kv.getByPrefix('complaint:');
     const openComplaints = allComplaints.filter((c: any) => c.status === 'Open');
-    
+
     const allInstallations = await kv.getByPrefix('installation:');
     const activeInstallations = allInstallations.filter((i: any) => i.status === 'Installed');
 
@@ -662,7 +680,7 @@ app.get("/make-server-b3c655af/admin/analytics", async (c) => {
 // =====================================================
 
 // Get solar plans
-app.get("/make-server-b3c655af/plans", async (c) => {
+app.get("/plans", async (c: Context) => {
   try {
     const plans = await kv.get('solar:plans') || [];
     return c.json({ plans });
@@ -673,7 +691,7 @@ app.get("/make-server-b3c655af/plans", async (c) => {
 });
 
 // Update solar plans (Admin only)
-app.post("/make-server-b3c655af/admin/plans", async (c) => {
+app.post("/admin/plans", async (c: Context) => {
   try {
     const accessToken = c.req.header('Authorization')?.split(' ')[1];
     if (!accessToken) {
@@ -701,7 +719,7 @@ app.post("/make-server-b3c655af/admin/plans", async (c) => {
 });
 
 // Get testimonials
-app.get("/make-server-b3c655af/testimonials", async (c) => {
+app.get("/testimonials", async (c: Context) => {
   try {
     const testimonials = await kv.get('solar:testimonials') || [];
     return c.json({ testimonials });

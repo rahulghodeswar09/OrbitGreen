@@ -1,8 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@/app/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { Sun, Zap, Shield, Users, Phone, Mail, MapPin, Check, Star, Award, Clock } from 'lucide-react';
+import {
+  Sun, Zap, Shield, Users, Phone, Mail, MapPin, Check, Star,
+  Award, Clock, ChevronDown, ArrowRight, Leaf, TrendingUp,
+  Battery, Cpu, Menu, X, IndianRupee,
+} from 'lucide-react';
 import { publicAPI } from '@/app/utils/api';
 
 interface LandingPageProps {
@@ -10,523 +13,560 @@ interface LandingPageProps {
   onRegisterClick: () => void;
 }
 
+// ─── Default data ─────────────────────────────────────────────────────────────
+const DEFAULT_PLANS = [
+  {
+    capacity: '1 kW',
+    price: '₹60,000',
+    subsidy: '₹30,000',
+    finalPrice: '₹30,000',
+    units: '3–4 units/day',
+    features: ['25-year panel warranty', 'PM Surya Ghar subsidy', 'Net metering', 'Free site survey'],
+  },
+  {
+    capacity: '2 kW',
+    price: '₹1,20,000',
+    subsidy: '₹60,000',
+    finalPrice: '₹60,000',
+    units: '8–10 units/day',
+    popular: true,
+    features: ['25-year panel warranty', 'PM Surya Ghar subsidy', 'Net metering', 'Free site survey', 'Priority support'],
+  },
+  {
+    capacity: '3 kW',
+    price: '₹1,80,000',
+    subsidy: '₹78,000',
+    finalPrice: '₹1,02,000',
+    units: '12–15 units/day',
+    features: ['25-year panel warranty', 'PM Surya Ghar subsidy', 'Net metering', 'Free site survey', 'Priority support', 'AMC included'],
+  },
+];
+
+const DEFAULT_TESTIMONIALS = [
+  { name: 'Rajesh Kumar', location: 'Mumbai, MH', rating: 5, comment: 'Excellent service! My electricity bill reduced by 80%. Highly recommend Orbit Green Power.' },
+  { name: 'Priya Sharma', location: 'Pune, MH', rating: 5, comment: 'Professional installation team. Got subsidy within 3 months. Very happy with the system.' },
+  { name: 'Amit Patel', location: 'Ahmedabad, GJ', rating: 5, comment: 'Best investment I made. Quality Waaree panels. Working perfectly for 2 years now.' },
+];
+
+const STATS = [
+  { value: '5000+', label: 'Installations', icon: Zap },
+  { value: '10+', label: 'Years Experience', icon: Clock },
+  { value: '25 Yr', label: 'Warranty', icon: Shield },
+  { value: '98%', label: 'Satisfaction', icon: Star },
+];
+
+const BRANDS = ['Waaree', 'Adani Solar', 'Vikram Solar', 'Growatt', 'Luminous', 'Havells', 'Tata Power Solar', 'RenewSys'];
+
+// ─── Animated counter ─────────────────────────────────────────────────────────
+function useCountUp(target: string, duration = 1500, start = false) {
+  const [count, setCount] = useState('0');
+  useEffect(() => {
+    if (!start) return;
+    const num = parseInt(target.replace(/\D/g, ''));
+    if (isNaN(num)) { setCount(target); return; }
+    let startTime: number;
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.floor(eased * num).toString() + target.replace(/[\d]/g, ''));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [start, target, duration]);
+  return count;
+}
+
+// ─── Stat item (own component so hook is called at top level) ─────────────────
+function StatItem({ value, label, icon: Icon, inView }: { value: string; label: string; icon: React.ElementType; inView: boolean }) {
+  useCountUp(value, 1500, inView); // keep hook call valid
+  return (
+    <div className="text-center group">
+      <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 mb-4 group-hover:bg-green-500/20 transition-colors mx-auto">
+        <Icon className="h-7 w-7 text-green-400" />
+      </div>
+      <div className="text-3xl md:text-4xl font-extrabold text-white mb-1">{inView ? value : '0'}</div>
+      <div className="text-sm text-gray-400 font-medium">{label}</div>
+    </div>
+  );
+}
+
+// ─── Intersection observer hook ───────────────────────────────────────────────
+function useInView(threshold = 0.2) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const obs = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) { setInView(true); obs.disconnect(); }
+    }, { threshold });
+    if (ref.current) obs.observe(ref.current);
+    return () => obs.disconnect();
+  }, [threshold]);
+  return { ref, inView };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegisterClick }) => {
-  const [plans, setPlans] = useState<any[]>([]);
-  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [plans, setPlans] = useState(DEFAULT_PLANS);
+  const [testimonials, setTestimonials] = useState(DEFAULT_TESTIMONIALS);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const { ref: statsRef, inView: statsInView } = useInView();
 
   useEffect(() => {
-    loadData();
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const loadData = async () => {
-    try {
-      const [plansData, testimonialsData] = await Promise.all([
-        publicAPI.getPlans(),
-        publicAPI.getTestimonials(),
-      ]);
-      
-      // Set default plans if none exist
-      if (plansData.plans.length === 0) {
-        setPlans([
-          {
-            capacity: '1kW',
-            price: '₹60,000',
-            subsidy: '₹30,000',
-            finalPrice: '₹30,000',
-            features: ['2-3 units/day', '25 years warranty', 'PM Surya Ghar subsidy eligible'],
-          },
-          {
-            capacity: '2kW',
-            price: '₹1,20,000',
-            subsidy: '₹60,000',
-            finalPrice: '₹60,000',
-            features: ['8-10 units/day', '25 years warranty', 'PM Surya Ghar subsidy eligible'],
-            popular: true,
-          },
-          {
-            capacity: '3kW',
-            price: '₹1,80,000',
-            subsidy: '₹78,000',
-            finalPrice: '₹1,02,000',
-            features: ['12-15 units/day', '25 years warranty', 'PM Surya Ghar subsidy eligible'],
-          },
-        ]);
-      } else {
-        setPlans(plansData.plans);
-      }
+  useEffect(() => {
+    publicAPI.getPlans().then(d => { if (d.plans?.length) setPlans(d.plans); }).catch(() => { });
+    publicAPI.getTestimonials().then(d => { if (d.testimonials?.length) setTestimonials(d.testimonials); }).catch(() => { });
+  }, []);
 
-      // Set default testimonials if none exist
-      if (testimonialsData.testimonials.length === 0) {
-        setTestimonials([
-          {
-            name: 'Rajesh Kumar',
-            location: 'Mumbai',
-            rating: 5,
-            comment: 'Excellent service! My electricity bill reduced by 80%. Highly recommend Orbit Green Power.',
-          },
-          {
-            name: 'Priya Sharma',
-            location: 'Pune',
-            rating: 5,
-            comment: 'Professional installation team. Got subsidy within 3 months. Very happy with the system.',
-          },
-          {
-            name: 'Amit Patel',
-            location: 'Ahmedabad',
-            rating: 5,
-            comment: 'Best investment I made. Quality panels from Waaree. Working perfectly for 2 years now.',
-          },
-        ]);
-      } else {
-        setTestimonials(testimonialsData.testimonials);
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    }
+  const scrollTo = (id: string) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setMobileMenuOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
-      {/* Header/Navigation */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sun className="h-8 w-8 text-green-600" />
+    <div className="min-h-screen bg-[#0a0f0a] text-white overflow-x-hidden">
+
+      {/* ── Navbar ── */}
+      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0a0f0a]/95 backdrop-blur-md shadow-lg shadow-green-900/20 border-b border-green-900/30' : 'bg-transparent'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 md:h-20">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
+                  <Sun className="h-6 w-6 text-white" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-yellow-400 animate-pulse" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-green-600">Orbit Green Power Technology</h1>
-                <p className="text-sm text-gray-600">Solar Panel Lava, Bij Billapasun Mukta Vha</p>
+                <p className="text-base font-bold text-white leading-tight">Orbit Green Power</p>
+                <p className="text-[10px] text-green-400 leading-tight">Technology</p>
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={onLoginClick}>Login</Button>
-              <Button onClick={onRegisterClick} className="bg-green-600 hover:bg-green-700">Register</Button>
+
+            {/* Desktop nav links */}
+            <div className="hidden md:flex items-center gap-8">
+              {['about', 'services', 'plans', 'contact'].map(s => (
+                <button key={s} onClick={() => scrollTo(s)}
+                  className="text-sm text-gray-300 hover:text-green-400 capitalize transition-colors font-medium">
+                  {s}
+                </button>
+              ))}
             </div>
+
+            {/* CTA buttons */}
+            <div className="hidden md:flex items-center gap-3">
+              <Button variant="ghost" onClick={onLoginClick}
+                className="text-gray-300 hover:text-white hover:bg-white/10 border border-white/10">
+                Login
+              </Button>
+              <Button onClick={onRegisterClick}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white shadow-lg shadow-green-500/30 border-0">
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Mobile menu toggle */}
+            <button className="md:hidden text-gray-300 hover:text-white" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center">
-          <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-200">100% Renewable Energy</Badge>
-          <h2 className="text-5xl font-bold mb-6 text-gray-900">
-            Solar Panel Lava, <br />
-            <span className="text-green-600">Bij Billapasun Mukta Vha</span>
-          </h2>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Transform sunlight into savings. Get premium solar solutions with government subsidies and 25-year warranty.
+        {/* Mobile menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-[#0d1a0d]/98 backdrop-blur-md border-t border-green-900/30 px-4 py-4 space-y-3">
+            {['about', 'services', 'plans', 'contact'].map(s => (
+              <button key={s} onClick={() => scrollTo(s)}
+                className="block w-full text-left text-gray-300 hover:text-green-400 capitalize py-2 text-sm font-medium">
+                {s}
+              </button>
+            ))}
+            <div className="flex gap-3 pt-2">
+              <Button variant="outline" onClick={onLoginClick} className="flex-1 border-green-700 text-green-400 hover:bg-green-900/30">Login</Button>
+              <Button onClick={onRegisterClick} className="flex-1 bg-green-600 hover:bg-green-500">Register</Button>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* ── Hero ── */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        {/* Background */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f0a] via-[#0d1a0d] to-[#0a0f0a]" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-500/8 rounded-full blur-3xl animate-pulse delay-1000" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-900/20 rounded-full blur-3xl" />
+          {/* Grid overlay */}
+          <div className="absolute inset-0 opacity-5"
+            style={{ backgroundImage: 'linear-gradient(rgba(34,197,94,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.3) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-8 backdrop-blur-sm">
+            <Leaf className="h-4 w-4 text-green-400" />
+            <span className="text-sm text-green-400 font-medium">PM Surya Ghar Yojana — Up to ₹78,000 Subsidy Available</span>
+          </div>
+
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-6 leading-tight tracking-tight">
+            <span className="text-white">Power Your Home</span>
+            <br />
+            <span className="bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
+              With Solar Energy
+            </span>
+          </h1>
+
+          <p className="text-lg sm:text-xl text-gray-400 mb-4 max-w-2xl mx-auto leading-relaxed">
+            Invest once. Save forever. Orbit Green Power Technology delivers premium solar installations with government subsidies and 25-year warranty.
           </p>
-          <div className="flex gap-4 justify-center">
-            <Button size="lg" onClick={onRegisterClick} className="bg-green-600 hover:bg-green-700">
-              Get Started
+          <p className="text-base text-green-400 font-semibold mb-10">
+            🌞 GO GREEN · SAVE ENERGY · EARN MONEY
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" onClick={onRegisterClick}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white text-base px-8 py-6 shadow-2xl shadow-green-500/30 border-0 rounded-xl">
+              Get Free Quote <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919876543210')}>
-              <Phone className="mr-2 h-5 w-5" />
-              Call Now
+            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919876543210')}
+              className="border-green-700 text-green-400 hover:bg-green-900/30 text-base px-8 py-6 rounded-xl backdrop-blur-sm">
+              <Phone className="mr-2 h-5 w-5" /> Call Now
             </Button>
+          </div>
+
+          {/* Scroll cue */}
+          <div className="mt-20 flex justify-center animate-bounce">
+            <button onClick={() => scrollTo('about')} className="text-gray-600 hover:text-green-400 transition-colors">
+              <ChevronDown className="h-8 w-8" />
+            </button>
           </div>
         </div>
       </section>
 
-      {/* About Section */}
-      <section className="py-16 px-4 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">About Orbit Green Power Technology</h3>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              We are a leading solar energy solutions provider committed to making clean energy accessible to everyone. 
-              With years of experience and thousands of satisfied customers, we deliver quality, reliability, and excellence.
+      {/* ── Stats ── */}
+      <section ref={statsRef} className="py-16 bg-gradient-to-r from-green-900/20 via-emerald-900/10 to-green-900/20 border-y border-green-900/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {STATS.map(({ value, label, icon: Icon }) => (
+              <StatItem key={label} value={value} label={label} icon={Icon} inView={statsInView} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── About ── */}
+      <section id="about" className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20">About Us</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
+              Leading Solar Solutions <br />
+              <span className="text-green-400">in Maharashtra</span>
+            </h2>
+            <p className="text-gray-400 text-lg max-w-3xl mx-auto leading-relaxed">
+              We are a premier solar energy solutions provider committed to making clean energy accessible to every home and business.
+              With 10+ years of experience and 5000+ satisfied customers, we deliver quality, reliability, and excellence.
             </p>
           </div>
-          
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card>
-              <CardHeader>
-                <Award className="h-12 w-12 text-green-600 mb-4" />
-                <CardTitle>Our Mission</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  To empower every home and business with sustainable solar energy, reducing carbon footprint and electricity costs.
-                </p>
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <Star className="h-12 w-12 text-green-600 mb-4" />
-                <CardTitle>Our Vision</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  A future where solar energy is the primary source of power, creating a cleaner and greener planet for generations.
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Shield className="h-12 w-12 text-green-600 mb-4" />
-                <CardTitle>Our Values</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">
-                  Quality, transparency, customer satisfaction, and environmental responsibility guide everything we do.
-                </p>
-              </CardContent>
-            </Card>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { icon: Award, title: 'Our Mission', desc: 'To empower every home and business with sustainable solar energy, reducing carbon footprint and electricity costs across India.' },
+              { icon: TrendingUp, title: 'Our Vision', desc: 'A future where solar energy is the primary power source, creating a cleaner and greener planet for generations to come.' },
+              { icon: Shield, title: 'Our Values', desc: 'Quality, transparency, customer satisfaction, and environmental responsibility guide every installation we do.' },
+            ].map(({ icon: Icon, title, desc }) => (
+              <div key={title} className="group relative p-8 rounded-2xl bg-gradient-to-br from-green-900/20 to-emerald-900/10 border border-green-900/30 hover:border-green-500/40 transition-all duration-300 hover:-translate-y-1">
+                <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-6 group-hover:bg-green-500/20 transition-colors">
+                  <Icon className="h-7 w-7 text-green-400" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
+                <p className="text-gray-400 leading-relaxed">{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Services Section */}
+      {/* ── Services ── */}
+      <section id="services" className="py-24 px-4 bg-gradient-to-b from-transparent via-green-900/5 to-transparent">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Our Services</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Comprehensive Solar Solutions</h2>
+            <p className="text-gray-400 text-lg">Everything you need for a complete solar transition</p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Zap, title: 'On-Grid Solar System', tag: 'Most Popular',
+                desc: 'Connect to the grid and earn credits for excess power. Ideal for homes and businesses with consistent power supply.',
+                features: ['Net metering enabled', 'Up to 90% bill reduction', 'Low maintenance cost', 'ROI in 4–6 years'],
+              },
+              {
+                icon: Battery, title: 'Off-Grid Solar System', tag: 'Power Independence',
+                desc: 'Complete energy independence with battery backup. Perfect for areas with frequent power cuts.',
+                features: ['24/7 power availability', 'Battery backup included', 'No grid dependency', 'Ideal for rural areas'],
+              },
+              {
+                icon: Cpu, title: 'Commercial & Industrial', tag: 'Enterprise',
+                desc: 'Large-scale solar installations for factories, commercial complexes, and industrial units.',
+                features: ['10 kW to 1 MW+ capacity', 'ROI in 3–5 years', 'Tax benefits available', 'Dedicated project manager'],
+              },
+            ].map(({ icon: Icon, title, tag, desc, features }) => (
+              <div key={title} className="group relative p-8 rounded-2xl bg-[#0d1a0d] border border-green-900/30 hover:border-green-500/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-green-500/10">
+                <div className="flex items-start justify-between mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center group-hover:bg-green-500/20 transition-colors">
+                    <Icon className="h-7 w-7 text-green-400" />
+                  </div>
+                  <span className="text-xs px-3 py-1 rounded-full bg-green-500/10 text-green-400 border border-green-500/20 font-medium">{tag}</span>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
+                <p className="text-gray-400 mb-6 leading-relaxed text-sm">{desc}</p>
+                <ul className="space-y-2">
+                  {features.map(f => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-gray-300">
+                      <Check className="h-4 w-4 text-green-400 flex-shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Subsidy Banner ── */}
       <section className="py-16 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Our Services</h3>
-            <p className="text-lg text-gray-600">Comprehensive solar solutions for all your needs</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <Zap className="h-12 w-12 text-green-600 mb-4" />
-                <CardTitle>On-Grid Solar System</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Connect to the grid and save on electricity bills. Excess power feeds back to the grid, earning you credits.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">Net metering available</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">Up to 90% bill reduction</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">Low maintenance</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <Sun className="h-12 w-12 text-green-600 mb-4" />
-                <CardTitle>Residential Solar</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Power your home with clean energy. Custom solutions designed for Indian households.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">1kW to 10kW systems</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">Subsidy support included</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">25-year warranty</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <Users className="h-12 w-12 text-green-600 mb-4" />
-                <CardTitle>Commercial & Industrial</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  Large-scale solar installations for businesses, factories, and commercial complexes.
-                </p>
-                <ul className="space-y-2">
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">10kW to 1MW+ capacity</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">ROI in 3-5 years</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-green-600 mt-0.5" />
-                    <span className="text-sm">Tax benefits available</span>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Government Subsidy Section */}
-      <section className="py-16 px-4 bg-green-50">
-        <div className="container mx-auto">
-          <div className="bg-white rounded-lg p-8 shadow-lg">
-            <div className="text-center mb-8">
-              <Badge className="mb-4 bg-green-600 text-white">PM Surya Ghar Yojana</Badge>
-              <h3 className="text-3xl font-bold mb-4">Government Subsidy Support</h3>
-              <p className="text-lg text-gray-600">
-                Get up to ₹78,000 subsidy on residential solar installations under PM Surya Ghar Muft Bijli Yojana
+        <div className="max-w-7xl mx-auto">
+          <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-green-600 via-emerald-600 to-teal-700 p-10 md:p-16">
+            <div className="absolute inset-0 opacity-10"
+              style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 50%, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+            <div className="relative z-10 text-center">
+              <Badge className="mb-6 bg-white/20 text-white border-white/30 text-sm px-4 py-1">🏛️ Government Scheme</Badge>
+              <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">PM Surya Ghar Muft Bijli Yojana</h2>
+              <p className="text-green-100 text-lg mb-10 max-w-2xl mx-auto">
+                Get up to <strong>₹78,000 subsidy</strong> on your residential solar installation. We handle all documentation and application processes.
               </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="text-center p-6 bg-green-50 rounded-lg">
-                <h4 className="text-2xl font-bold text-green-600 mb-2">₹30,000</h4>
-                <p className="text-gray-600">Subsidy on 1kW system</p>
+              <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mb-10">
+                {[['₹30,000', '1 kW System'], ['₹60,000', '2 kW System'], ['₹78,000', '3 kW+ System']].map(([amt, label]) => (
+                  <div key={label} className="bg-white/15 backdrop-blur rounded-2xl p-5 border border-white/20">
+                    <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">{amt}</div>
+                    <div className="text-green-100 text-sm">{label}</div>
+                  </div>
+                ))}
               </div>
-              <div className="text-center p-6 bg-green-50 rounded-lg">
-                <h4 className="text-2xl font-bold text-green-600 mb-2">₹60,000</h4>
-                <p className="text-gray-600">Subsidy on 2kW system</p>
-              </div>
-              <div className="text-center p-6 bg-green-50 rounded-lg">
-                <h4 className="text-2xl font-bold text-green-600 mb-2">₹78,000</h4>
-                <p className="text-gray-600">Subsidy on 3kW+ system</p>
-              </div>
-            </div>
-
-            <div className="mt-8 text-center">
-              <p className="text-gray-600 mb-4">We handle complete subsidy documentation and application process</p>
-              <Button onClick={onRegisterClick} className="bg-green-600 hover:bg-green-700">
-                Apply for Subsidy
+              <Button size="lg" onClick={onRegisterClick}
+                className="bg-white text-green-700 hover:bg-green-50 font-bold px-10 py-6 text-base rounded-xl shadow-xl">
+                Apply for Subsidy Now <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Why Choose Us Section */}
-      <section className="py-16 px-4 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Why Choose Us?</h3>
-            <p className="text-lg text-gray-600">Experience excellence in solar energy solutions</p>
+      {/* ── Plans ── */}
+      <section id="plans" className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Pricing Plans</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Solar Plans & Pricing</h2>
+            <p className="text-gray-400 text-lg">Transparent pricing with government subsidy applied</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="text-center">
-              <CardHeader>
-                <Clock className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <CardTitle>10+ Years Experience</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Trusted expertise in solar installations</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <Shield className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <CardTitle>25 Years Warranty</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Comprehensive product and performance warranty</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <Award className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <CardTitle>Premium Brands</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Waaree, Adani, Vikram Solar certified products</p>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <Users className="h-12 w-12 text-green-600 mx-auto mb-4" />
-                <CardTitle>Skilled Team</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600">Certified engineers and technicians</p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Solar Plans Section */}
-      <section className="py-16 px-4">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Available Solar Plans</h3>
-            <p className="text-lg text-gray-600">Choose the perfect solar system for your needs</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {plans.map((plan, index) => (
-              <Card key={index} className={`relative ${plan.popular ? 'border-green-600 border-2 shadow-xl' : ''}`}>
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {plans.map((plan, i) => (
+              <div key={i} className={`relative rounded-2xl p-8 border transition-all duration-300 hover:-translate-y-2 ${plan.popular
+                ? 'bg-gradient-to-br from-green-600/20 to-emerald-600/10 border-green-500/60 shadow-2xl shadow-green-500/20'
+                : 'bg-[#0d1a0d] border-green-900/30 hover:border-green-500/40'
+                }`}>
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-green-600 text-white">Most Popular</Badge>
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold shadow-lg">
+                      ⭐ Most Popular
+                    </span>
                   </div>
                 )}
-                <CardHeader className="text-center">
-                  <CardTitle className="text-3xl text-green-600">{plan.capacity}</CardTitle>
-                  <CardDescription>Solar System</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center mb-6">
-                    <div className="text-gray-500 line-through text-sm">{plan.price}</div>
-                    <div className="text-sm text-green-600 font-semibold">- {plan.subsidy} subsidy</div>
-                    <div className="text-3xl font-bold text-gray-900 mt-2">{plan.finalPrice}</div>
-                    <div className="text-sm text-gray-600">after subsidy</div>
-                  </div>
-                  <ul className="space-y-3 mb-6">
-                    {plan.features.map((feature: string, idx: number) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button className="w-full bg-green-600 hover:bg-green-700" onClick={onRegisterClick}>
-                    Get Quote
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Partner Brands Section */}
-      <section className="py-16 px-4 bg-gray-50">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Our Partner Brands</h3>
-            <p className="text-lg text-gray-600">We work with the best in the industry</p>
-          </div>
+                <div className="text-center mb-8">
+                  <div className="text-4xl font-extrabold text-green-400 mb-1">{plan.capacity}</div>
+                  <div className="text-sm text-gray-500 mb-4">Solar System</div>
+                  <div className="text-gray-500 line-through text-sm">{plan.price}</div>
+                  <div className="text-sm text-green-400 font-semibold">− {plan.subsidy} subsidy</div>
+                  <div className="text-4xl font-extrabold text-white mt-2">{plan.finalPrice}</div>
+                  <div className="text-xs text-gray-500 mt-1">after government subsidy</div>
+                  {plan.units && <div className="mt-3 text-sm text-emerald-400 font-medium">⚡ {plan.units}</div>}
+                </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center max-w-4xl mx-auto">
-            {['Waaree', 'Adani Solar', 'Vikram Solar', 'Growatt', 'Luminous', 'Havells', 'Tata Power Solar', 'RenewSys'].map((brand) => (
-              <div key={brand} className="bg-white p-6 rounded-lg shadow-sm text-center">
-                <p className="font-semibold text-gray-700">{brand}</p>
+                <ul className="space-y-3 mb-8">
+                  {(plan.features || []).map((f: string, j: number) => (
+                    <li key={j} className="flex items-center gap-3 text-sm text-gray-300">
+                      <div className="w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                        <Check className="h-3 w-3 text-green-400" />
+                      </div>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <Button onClick={onRegisterClick}
+                  className={`w-full py-5 rounded-xl font-semibold ${plan.popular
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white shadow-lg shadow-green-500/30 border-0'
+                    : 'bg-green-900/30 hover:bg-green-900/50 text-green-400 border border-green-700/50'
+                    }`}>
+                  Get This Plan
+                </Button>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-16 px-4 bg-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Customer Testimonials</h3>
-            <p className="text-lg text-gray-600">See what our satisfied customers say</p>
+      {/* ── Why Choose Us ── */}
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent via-green-900/5 to-transparent">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Why Us</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Why Choose Orbit Green Power?</h2>
+            <p className="text-gray-400 text-lg">Experience excellence in every solar installation</p>
           </div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {testimonials.map((testimonial, index) => (
-              <Card key={index}>
-                <CardHeader>
-                  <div className="flex gap-1 mb-2">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <CardTitle className="text-lg">{testimonial.name}</CardTitle>
-                  <CardDescription>{testimonial.location}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 italic">"{testimonial.comment}"</p>
-                </CardContent>
-              </Card>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { icon: Clock, title: '10+ Years', sub: 'Industry Experience', desc: 'Trusted expertise in solar installations across Maharashtra and Gujarat.' },
+              { icon: Shield, title: '25 Years', sub: 'Panel Warranty', desc: 'Comprehensive product and performance warranty on all installations.' },
+              { icon: Award, title: 'Premium', sub: 'Brands Only', desc: 'Waaree, Adani, Vikram Solar, Tata Power Solar certified products.' },
+              { icon: Users, title: 'Expert', sub: 'Certified Team', desc: 'MNRE certified engineers and trained installation technicians.' },
+            ].map(({ icon: Icon, title, sub, desc }) => (
+              <div key={title} className="group p-6 rounded-2xl bg-[#0d1a0d] border border-green-900/30 hover:border-green-500/40 transition-all duration-300 hover:-translate-y-1 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5 mx-auto group-hover:bg-green-500/20 transition-colors">
+                  <Icon className="h-8 w-8 text-green-400" />
+                </div>
+                <div className="text-2xl font-extrabold text-white">{title}</div>
+                <div className="text-green-400 text-sm font-semibold mb-3">{sub}</div>
+                <p className="text-gray-500 text-sm leading-relaxed">{desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section className="py-16 px-4 bg-green-600 text-white">
-        <div className="container mx-auto">
-          <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold mb-4">Contact Us</h3>
-            <p className="text-lg">Get in touch with our solar experts</p>
+      {/* ── Partner Brands ── */}
+      <section className="py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-center text-gray-500 text-sm font-medium mb-8 uppercase tracking-widest">Trusted Partner Brands</p>
+          <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
+            {BRANDS.map(brand => (
+              <div key={brand} className="flex items-center justify-center p-4 rounded-xl bg-[#0d1a0d] border border-green-900/20 hover:border-green-500/40 transition-all group">
+                <span className="text-xs text-gray-500 group-hover:text-green-400 font-medium text-center transition-colors leading-tight">{brand}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Testimonials ── */}
+      <section className="py-24 px-4 bg-gradient-to-b from-transparent via-green-900/5 to-transparent">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Testimonials</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">What Our Customers Say</h2>
+            <p className="text-gray-400 text-lg">5000+ happy customers across India</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <div key={i} className="p-8 rounded-2xl bg-[#0d1a0d] border border-green-900/30 hover:border-green-500/40 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex gap-1 mb-4">
+                  {[...Array(t.rating)].map((_, j) => (
+                    <Star key={j} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                  ))}
+                </div>
+                <p className="text-gray-300 italic mb-6 leading-relaxed">"{t.comment}"</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold text-sm">
+                    {t.name.charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-white font-semibold text-sm">{t.name}</p>
+                    <p className="text-gray-500 text-xs flex items-center gap-1"><MapPin className="h-3 w-3" />{t.location}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Contact ── */}
+      <section id="contact" className="py-24 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Contact Us</Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Get In Touch</h2>
+            <p className="text-gray-400 text-lg">Our solar experts are ready to help you</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <Card className="bg-white/10 backdrop-blur border-white/20 text-white">
-              <CardHeader>
-                <Phone className="h-12 w-12 mb-4 mx-auto" />
-                <CardTitle className="text-center">Phone</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="mb-2">+91 98765 43210</p>
-                <p>+91 87654 32109</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/10 backdrop-blur border-white/20 text-white">
-              <CardHeader>
-                <Mail className="h-12 w-12 mb-4 mx-auto" />
-                <CardTitle className="text-center">Email</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="mb-2">info@orbitgreenpower.com</p>
-                <p>support@orbitgreenpower.com</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white/10 backdrop-blur border-white/20 text-white">
-              <CardHeader>
-                <MapPin className="h-12 w-12 mb-4 mx-auto" />
-                <CardTitle className="text-center">Address</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p>Green Energy Park,</p>
-                <p>Solar City, Mumbai - 400001</p>
-              </CardContent>
-            </Card>
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
+            {[
+              { icon: Phone, title: 'Phone', lines: ['+91 98765 43210', '+91 87654 32109'], action: () => window.open('tel:+919876543210') },
+              { icon: Mail, title: 'Email', lines: ['info@orbitgreenpower.com', 'support@orbitgreenpower.com'], action: () => window.open('mailto:info@orbitgreenpower.com') },
+              { icon: MapPin, title: 'Address', lines: ['CH. Sambhaji Chowk, Rendal', 'Tal-Hatkalange, Kolhapur - 416203'], action: undefined },
+            ].map(({ icon: Icon, title, lines, action }) => (
+              <div key={title} onClick={action}
+                className={`p-8 rounded-2xl bg-[#0d1a0d] border border-green-900/30 hover:border-green-500/40 transition-all text-center ${action ? 'cursor-pointer hover:-translate-y-1' : ''}`}>
+                <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-5 mx-auto">
+                  <Icon className="h-7 w-7 text-green-400" />
+                </div>
+                <h3 className="text-white font-bold text-lg mb-3">{title}</h3>
+                {lines.map((l, i) => <p key={i} className="text-gray-400 text-sm">{l}</p>)}
+              </div>
+            ))}
           </div>
 
-          <div className="flex gap-4 justify-center mt-12">
-            <Button 
-              size="lg" 
-              variant="secondary"
-              onClick={() => window.open('https://wa.me/919876543210', '_blank')}
-              className="bg-white text-green-600 hover:bg-gray-100"
-            >
-              WhatsApp Us
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button size="lg" onClick={() => window.open('https://wa.me/919876543210', '_blank')}
+              className="bg-[#25D366] hover:bg-[#20bd5a] text-white px-10 py-6 rounded-xl text-base font-semibold shadow-lg shadow-green-500/20 border-0">
+              💬 WhatsApp Us
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              onClick={() => window.open('tel:+919876543210')}
-              className="border-white text-white hover:bg-white/10"
-            >
-              <Phone className="mr-2 h-5 w-5" />
-              Call Now
+            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919876543210')}
+              className="border-green-700 text-green-400 hover:bg-green-900/30 px-10 py-6 rounded-xl text-base">
+              <Phone className="mr-2 h-5 w-5" /> Call Now
+            </Button>
+            <Button size="lg" onClick={onRegisterClick}
+              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white px-10 py-6 rounded-xl text-base font-semibold border-0">
+              Register Now <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 px-4">
-        <div className="container mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sun className="h-6 w-6 text-green-400" />
-            <h4 className="text-xl font-bold">Orbit Green Power Technology</h4>
+      {/* ── Footer ── */}
+      <footer className="border-t border-green-900/30 py-12 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+                <Sun className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold">Orbit Green Power Technology</p>
+                <p className="text-green-400 text-xs">Invest one Time and Save Money Forever</p>
+              </div>
+            </div>
+            <div className="flex gap-6 text-sm text-gray-500">
+              {['about', 'services', 'plans', 'contact'].map(s => (
+                <button key={s} onClick={() => scrollTo(s)} className="hover:text-green-400 capitalize transition-colors">{s}</button>
+              ))}
+            </div>
+            <p className="text-gray-600 text-sm">© 2026 Orbit Green Power Technology. All rights reserved.</p>
           </div>
-          <p className="text-gray-400 mb-4">Solar Panel Lava, Bij Billapasun Mukta Vha</p>
-          <p className="text-gray-500 text-sm">
-            © 2026 Orbit Green Power Technology. All rights reserved.
-          </p>
         </div>
       </footer>
     </div>

@@ -1,67 +1,60 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from '@/app/contexts/AuthContext';
 import { LandingPage } from '@/app/components/LandingPage';
-import { AuthModal } from '@/app/components/AuthModal';
 import { CustomerDashboard } from '@/app/components/CustomerDashboard';
 import { AdminDashboard } from '@/app/components/AdminDashboard';
-import { Toaster } from '@/app/components/ui/sonner';
+import { AuthModal } from '@/app/components/AuthModal';
+import { Loader2, Sun } from 'lucide-react';
 
-function AppContent() {
+// ─── Inner app (needs auth context) ──────────────────────────────────────────
+function AppInner() {
   const { user, loading } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<'login' | 'register' | 'admin'>('login');
 
-  const handleLoginClick = () => {
-    setAuthModalTab('login');
-    setShowAuthModal(true);
-  };
+  const openLogin = () => { setAuthModalTab('login'); setAuthModalOpen(true); };
+  const openRegister = () => { setAuthModalTab('register'); setAuthModalOpen(true); };
 
-  const handleRegisterClick = () => {
-    setAuthModalTab('register');
-    setShowAuthModal(true);
-  };
-
+  // Loading screen
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0a0f0a] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-green-500/30">
+            <Sun className="h-10 w-10 text-white" />
+          </div>
+          <h1 className="text-white text-xl font-bold mb-2">Orbit Green Power</h1>
+          <p className="text-green-400 text-sm mb-6">Technology</p>
+          <Loader2 className="h-6 w-6 animate-spin text-green-400 mx-auto" />
         </div>
       </div>
     );
   }
 
-  // If user is logged in, show appropriate dashboard
+  // Authenticated — route by role
   if (user) {
-    if (user.role === 'admin') {
-      return <AdminDashboard />;
-    } else {
-      return <CustomerDashboard />;
-    }
+    if (user.role === 'admin') return <AdminDashboard />;
+    return <CustomerDashboard />;
   }
 
-  // Otherwise show landing page
+  // Public landing page
   return (
     <>
-      <LandingPage
-        onLoginClick={handleLoginClick}
-        onRegisterClick={handleRegisterClick}
-      />
+      <LandingPage onLoginClick={openLogin} onRegisterClick={openRegister} />
       <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
         defaultTab={authModalTab}
       />
     </>
   );
 }
 
+// ─── Root with provider ───────────────────────────────────────────────────────
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
-      <Toaster />
+      <AppInner />
     </AuthProvider>
   );
 }

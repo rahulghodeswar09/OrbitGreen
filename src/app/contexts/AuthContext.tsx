@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '@/app/utils/api';
+import { supabase } from '@/lib/supabase';
 
-interface User {
+// ─── Types ───────────────────────────────────────────────────────────────────
+export interface User {
   id: string;
   email: string;
   name: string;
   phone?: string;
   address?: string;
   role: 'customer' | 'admin';
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -16,27 +19,68 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  signup: (email: string, password: string, name: string, phone?: string, address?: string) => Promise<void>;
-  adminSignup: (email: string, password: string, name: string, adminKey: string) => Promise<void>;
+  signup: (
+    email: string,
+    password: string,
+    name: string,
+    phone?: string,
+    address?: string
+  ) => Promise<void>;
+  adminSignup: (
+    email: string,
+    password: string,
+    name: string,
+    adminKey: string
+  ) => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
+// ─── Context ─────────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// ─── Provider ────────────────────────────────────────────────────────────────
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Check for existing session on mount
+  // Listen to Supabase auth state changes
   useEffect(() => {
+    // Get initial session
     checkSession();
+
+    // Subscribe to auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
+        setAccessToken(null);
+        setLoading(false);
+        return;
+      }
+
+      if (session?.access_token) {
+        setAccessToken(session.access_token);
+        try {
+          const { profile } = await authAPI.getProfile(session.access_token);
+          setUser(profile);
+        } catch (err) {
+          console.error('Error fetching profile on auth change:', err);
+        }
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const checkSession = async () => {
     try {
       const session = await authAPI.getSession();
-      if (session && session.access_token) {
+      if (session?.access_token) {
         setAccessToken(session.access_token);
         const { profile } = await authAPI.getProfile(session.access_token);
         setUser(profile);
@@ -49,70 +93,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      const data = await authAPI.login(email, password);
-      if (data.session) {
-        setAccessToken(data.session.access_token);
-        const { profile } = await authAPI.getProfile(data.session.access_token);
-        setUser(profile);
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    }
-  };
-
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-      setUser(null);
-      setAccessToken(null);
-    } catch (error) {
-      console.error('Logout error:', error);
-      throw error;
-    }
-  };
-
-  const signup = async (email: string, password: string, name: string, phone?: string, address?: string) => {
-    try {
-      await authAPI.signup(email, password, name, phone, address);
-      // After signup, automatically log in
-      await login(email, password);
-    } catch (error) {
-      console.error('Signup error:', error);
-      throw error;
-    }
-  };
-
-  const adminSignup = async (email: string, password: string, name: string, adminKey: string) => {
-    try {
-      await authAPI.adminSignup(email, password, name, adminKey);
-      // After signup, automatically log in
-      await login(email, password);
-    } catch (error) {
-      console.error('Admin signup error:', error);
-      throw error;
-    }
-  };
-
-  const refreshProfile = async () => {
-    if (accessToken) {
-      const { profile } = await authAPI.getProfile(accessToken);
+    const data = await authAPI.login(email, password);
+    if (data.session) {
+      setAccessToken(data.session.access_token);
+      const { profile } = await authAPI.getProfile(data.session.access_token);
       setUser(profile);
     }
   };
 
+  const logout = async () => {
+    await authAPI.logout();
+    setUser(null);
+    setAccessToken(null);
+  };
+
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    phone?: string,
+    address?: string
+  ) => {
+    await authAPI.signup(email, password, name, phone, address);
+    await login(email, password);
+  };
+
+  const adminSignup = async (
+    email: string,
+    password: string,
+    name: string,
+    adminKey: string
+  ) => {
+    await authAPI.adminSignup(email, password, name, adminKey);
+    await login(email, password);
+  };
+
+  const refreshProfile = async () => {
+    if (!accessToken) return;
+    const { profile } = await authAPI.getProfile(accessToken);
+    setUser(profile);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, accessToken, loading, login, logout, signup, adminSignup, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        accessToken,
+        loading,
+        login,
+        logout,
+        signup,
+        adminSignup,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 };
