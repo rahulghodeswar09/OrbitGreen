@@ -106,7 +106,7 @@ app.post("/auth/admin-signup", async (c: Context) => {
     const { email, password, name, adminKey } = body;
 
     // Simple admin key validation (in production, use better security)
-    if (adminKey !== "ADMIN_SECRET_2025") {
+    if (adminKey !== "Anil@123") {
       return c.json({ error: "Invalid admin key" }, 403);
     }
 

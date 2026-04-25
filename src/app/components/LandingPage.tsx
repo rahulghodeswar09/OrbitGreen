@@ -43,14 +43,14 @@ const DEFAULT_PLANS = [
 ];
 
 const DEFAULT_TESTIMONIALS = [
-  { name: 'Rajesh Kumar', location: 'Mumbai, MH', rating: 5, comment: 'Excellent service! My electricity bill reduced by 80%. Highly recommend Orbit Green Power.' },
-  { name: 'Priya Sharma', location: 'Pune, MH', rating: 5, comment: 'Professional installation team. Got subsidy within 3 months. Very happy with the system.' },
-  { name: 'Amit Patel', location: 'Ahmedabad, GJ', rating: 5, comment: 'Best investment I made. Quality Waaree panels. Working perfectly for 2 years now.' },
+  { name: 'Atul Ghodeswar', location: 'Rendal, Kolhapur', rating: 5, comment: 'Excellent service! My electricity bill reduced by 80%. Highly recommend Orbit Green Power.' },
+  { name: 'Sudarshan khot', location: 'Hupari, Kolhapur', rating: 5, comment: 'Professional installation team. Got subsidy within 3 months. Very happy with the system.' },
+  { name: 'Amol Davane', location: 'Ichalkaranji, Kolhapur', rating: 5, comment: 'Best investment I made. Quality Waaree panels. Working perfectly for 2 years now.' },
 ];
 
 const STATS = [
-  { value: '5000+', label: 'Installations', icon: Zap },
-  { value: '10+', label: 'Years Experience', icon: Clock },
+  { value: '50+', label: 'Installations', icon: Zap },
+  { value: '3+', label: 'Years Experience', icon: Clock },
   { value: '25 Yr', label: 'Warranty', icon: Shield },
   { value: '98%', label: 'Satisfaction', icon: Star },
 ];
@@ -137,16 +137,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-green-500/30">
-                  <Sun className="h-6 w-6 text-white" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-yellow-400 animate-pulse" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="relative shrink-0">
+                <img src="/logo.png" alt="Orbit Green Power Technology Logo" className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 object-contain drop-shadow-xl" />
               </div>
-              <div>
-                <p className="text-base font-bold text-white leading-tight">Orbit Green Power</p>
-                <p className="text-[10px] text-green-400 leading-tight">Technology</p>
+              <div className="min-w-0">
+                <p className="text-sm sm:text-base font-bold text-white leading-tight truncate">Orbit Green Power Technology</p>
+                <p className="text-[10px] sm:text-xs md:text-[20px] text-green-400 leading-tight">Qulity Is Our Identity</p>
               </div>
             </div>
 
@@ -200,26 +197,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
         {/* Background */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#0a0f0a] via-[#0d1a0d] to-[#0a0f0a]" />
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-500/8 rounded-full blur-3xl animate-pulse delay-1000" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-900/20 rounded-full blur-3xl" />
-          {/* Grid overlay */}
-          <div className="absolute inset-0 opacity-5"
-            style={{ backgroundImage: 'linear-gradient(rgba(34,197,94,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(34,197,94,0.3) 1px, transparent 1px)', backgroundSize: '60px 60px' }} />
+          <video
+            autoPlay
+            muted
+            playsInline
+            onEnded={(e) => (e.currentTarget.pause())}
+            className="absolute inset-0 w-full h-full object-cover opacity-60"
+          >
+            <source src="/bg-video.mp4" type="video/mp4" />
+          </video>
+          {/* Subtle overlay to ensure text readability without overpowering the video */}
+          <div className="absolute inset-0 bg-black/40 bg-gradient-to-b from-black/60 via-transparent to-black/60" />
+
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-500/5 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl animate-pulse delay-1000" />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/10 border border-green-500/30 mb-8 backdrop-blur-sm">
             <Leaf className="h-4 w-4 text-green-400" />
-            <span className="text-sm text-green-400 font-medium">PM Surya Ghar Yojana — Up to ₹78,000 Subsidy Available</span>
+            <span className="text-sm text-green-400 font-medium">PM Surya Ghar Yojana — Up to ₹78,000 Subsidy Available By Goverment</span>
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold mb-6 leading-tight tracking-tight">
+          <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold mb-6 leading-tight tracking-tight px-2">
             <span className="text-white">Power Your Home</span>
             <br />
             <span className="bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
-              With Solar Energy
+              With Orbit Green Power Technology
             </span>
           </h1>
 
@@ -227,7 +231,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
             Invest once. Save forever. Orbit Green Power Technology delivers premium solar installations with government subsidies and 25-year warranty.
           </p>
           <p className="text-base text-green-400 font-semibold mb-10">
-            🌞 GO GREEN · SAVE ENERGY · EARN MONEY
+            🌞 Think Green → Go Green → Save Energy
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -235,7 +239,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
               className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white text-base px-8 py-6 shadow-2xl shadow-green-500/30 border-0 rounded-xl">
               Get Free Quote <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
-            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919876543210')}
+            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919763246164')}
               className="border-green-700 text-green-400 hover:bg-green-900/30 text-base px-8 py-6 rounded-xl backdrop-blur-sm">
               <Phone className="mr-2 h-5 w-5" /> Call Now
             </Button>
@@ -272,7 +276,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
             </h2>
             <p className="text-gray-400 text-lg max-w-3xl mx-auto leading-relaxed">
               We are a premier solar energy solutions provider committed to making clean energy accessible to every home and business.
-              With 10+ years of experience and 5000+ satisfied customers, we deliver quality, reliability, and excellence.
+              With 2+ years of experience and 50+ satisfied customers, we deliver quality, reliability, and excellence.
             </p>
           </div>
 
@@ -352,15 +356,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
               style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 50%, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
             <div className="relative z-10 text-center">
               <Badge className="mb-6 bg-white/20 text-white border-white/30 text-sm px-4 py-1">🏛️ Government Scheme</Badge>
-              <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">PM Surya Ghar Muft Bijli Yojana</h2>
+              <h2 className="text-3xl md:text-5xl font-extrabold text-white mb-4">PM Surya Ghar Yojana</h2>
               <p className="text-green-100 text-lg mb-10 max-w-2xl mx-auto">
-                Get up to <strong>₹78,000 subsidy</strong> on your residential solar installation. We handle all documentation and application processes.
+                Get up to <strong>₹78,000 subsidy By Goverment</strong> on your residential solar installation. We handle all documentation and application processes.
               </p>
-              <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mb-10">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-2xl mx-auto mb-10">
                 {[['₹30,000', '1 kW System'], ['₹60,000', '2 kW System'], ['₹78,000', '3 kW+ System']].map(([amt, label]) => (
-                  <div key={label} className="bg-white/15 backdrop-blur rounded-2xl p-5 border border-white/20">
-                    <div className="text-2xl md:text-3xl font-extrabold text-white mb-1">{amt}</div>
-                    <div className="text-green-100 text-sm">{label}</div>
+                  <div key={label} className="bg-white/15 backdrop-blur rounded-2xl p-4 sm:p-5 border border-white/20">
+                    <div className="text-xl sm:text-2xl md:text-3xl font-extrabold text-white mb-1">{amt}</div>
+                    <div className="text-green-100 text-xs sm:text-sm">{label}</div>
                   </div>
                 ))}
               </div>
@@ -435,12 +439,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Why Us</Badge>
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Why Choose Orbit Green Power?</h2>
+            <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Why Choose Orbit Green Power Technology?</h2>
             <p className="text-gray-400 text-lg">Experience excellence in every solar installation</p>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { icon: Clock, title: '10+ Years', sub: 'Industry Experience', desc: 'Trusted expertise in solar installations across Maharashtra and Gujarat.' },
+              { icon: Clock, title: '10+ Years', sub: 'Industry Experience', desc: 'Trusted expertise in solar installations across Maharashtra and Qulity Is Our Identity' },
               { icon: Shield, title: '25 Years', sub: 'Panel Warranty', desc: 'Comprehensive product and performance warranty on all installations.' },
               { icon: Award, title: 'Premium', sub: 'Brands Only', desc: 'Waaree, Adani, Vikram Solar, Tata Power Solar certified products.' },
               { icon: Users, title: 'Expert', sub: 'Certified Team', desc: 'MNRE certified engineers and trained installation technicians.' },
@@ -462,10 +466,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto">
           <p className="text-center text-gray-500 text-sm font-medium mb-8 uppercase tracking-widest">Trusted Partner Brands</p>
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 sm:gap-4">
             {BRANDS.map(brand => (
-              <div key={brand} className="flex items-center justify-center p-4 rounded-xl bg-[#0d1a0d] border border-green-900/20 hover:border-green-500/40 transition-all group">
-                <span className="text-xs text-gray-500 group-hover:text-green-400 font-medium text-center transition-colors leading-tight">{brand}</span>
+              <div key={brand} className="flex items-center justify-center p-3 sm:p-4 rounded-xl bg-[#0d1a0d] border border-green-900/20 hover:border-green-500/40 transition-all group">
+                <span className="text-[10px] sm:text-xs text-gray-500 group-hover:text-green-400 font-medium text-center transition-colors leading-tight">{brand}</span>
               </div>
             ))}
           </div>
@@ -478,7 +482,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
           <div className="text-center mb-16">
             <Badge className="mb-4 bg-green-500/10 text-green-400 border border-green-500/30">Testimonials</Badge>
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">What Our Customers Say</h2>
-            <p className="text-gray-400 text-lg">5000+ happy customers across India</p>
+            <p className="text-gray-400 text-lg">50+ happy customers across India</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
@@ -515,8 +519,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[
-              { icon: Phone, title: 'Phone', lines: ['+91 98765 43210', '+91 87654 32109'], action: () => window.open('tel:+919876543210') },
-              { icon: Mail, title: 'Email', lines: ['info@orbitgreenpower.com', 'support@orbitgreenpower.com'], action: () => window.open('mailto:info@orbitgreenpower.com') },
+              { icon: Phone, title: 'Phone', lines: ['+91 9763246164', '+91 9552028430'], action: () => window.open('tel:+919763246164') },
+              { icon: Mail, title: 'Email', lines: ['orbitgpt22@gmail.com', 'rahulghodeswar99@gmail.com'], action: () => window.open('mailto:orbitgpt22@gmail.com') },
               { icon: MapPin, title: 'Address', lines: ['CH. Sambhaji Chowk, Rendal', 'Tal-Hatkalange, Kolhapur - 416203'], action: undefined },
             ].map(({ icon: Icon, title, lines, action }) => (
               <div key={title} onClick={action}
@@ -531,11 +535,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" onClick={() => window.open('https://wa.me/919876543210', '_blank')}
+            <Button size="lg" onClick={() => window.open('https://wa.me/919763246164', '_blank')}
               className="bg-[#25D366] hover:bg-[#20bd5a] text-white px-10 py-6 rounded-xl text-base font-semibold shadow-lg shadow-green-500/20 border-0">
               💬 WhatsApp Us
             </Button>
-            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919876543210')}
+            <Button size="lg" variant="outline" onClick={() => window.open('tel:+919763246164')}
               className="border-green-700 text-green-400 hover:bg-green-900/30 px-10 py-6 rounded-xl text-base">
               <Phone className="mr-2 h-5 w-5" /> Call Now
             </Button>
@@ -552,12 +556,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onRegist
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center">
-                <Sun className="h-6 w-6 text-white" />
-              </div>
+              <img src="/logo.png" alt="Orbit Green Power Technology Logo" className="w-12 h-12 object-contain" />
               <div>
                 <p className="text-white font-bold">Orbit Green Power Technology</p>
-                <p className="text-green-400 text-xs">Invest one Time and Save Money Forever</p>
+                <p className="text-green-400 text-xs">Invest one Time and Save Money Forever
+                  Energy Beyond Limits.
+                </p>
               </div>
             </div>
             <div className="flex gap-6 text-sm text-gray-500">
